@@ -4,6 +4,7 @@
   "description": "Node.js client for HailoRT GenAI server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "author": "jordanskole",
   "scripts": {
     "generate-proto": "npx ts-node scripts/generate-proto.ts",
     "build": "npm run generate-proto && tsc",
