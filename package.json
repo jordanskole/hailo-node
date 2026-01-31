@@ -1,0 +1,25 @@
+{
+  "name": "hailort",
+  "version": "0.1.0",
+  "description": "Node.js client for HailoRT GenAI server",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate-proto": "npx ts-node scripts/generate-proto.ts",
+    "build": "npm run generate-proto && tsc",
+    "example:chat": "npx ts-node examples/chat.ts"
+  },
+  "dependencies": {
+    "protobufjs": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "protobufjs-cli": "^2.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

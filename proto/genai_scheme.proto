@@ -1,0 +1,359 @@
+syntax = "proto3";
+
+message GenAIRpcRequest {
+    oneof request {
+        LLM_Create_Request llm_create = 1;
+        LLM_Get_Generator_Params_Request llm_get_generator_params = 2;
+        LLM_Generator_Create_Request llm_generator_create = 3;
+        LLM_Generator_Write_Request llm_generator_write = 4;
+        LLM_Generator_Generate_Request llm_generator_generate = 5;
+        LLM_Generator_Read_Request llm_generator_read = 6;
+        LLM_Generator_Abort_Request llm_generator_abort = 7;
+        LLM_Generator_Release_Request llm_generator_release = 8;
+        LLM_Tokenize_Request llm_tokenize = 9;
+        LLM_Get_Context_Request llm_get_context = 10;
+        LLM_Set_Context_Request llm_set_context = 11;
+        LLM_Clear_Context_Request llm_clear_context = 12;
+        LLM_Set_End_Of_Generation_Sequence_Request llm_set_end_of_generation_sequence = 13;
+        LLM_Get_End_Of_Generation_Sequence_Request llm_get_end_of_generation_sequence = 14;
+        LLM_Release_Request llm_release = 15;
+        LLM_Set_Stop_Tokens_Request llm_set_stop_tokens = 16;
+        LLM_Get_Stop_Tokens_Request llm_get_stop_tokens = 17;
+        LLM_Get_Context_Usage_Size_Request llm_get_context_usage_size = 18;
+        LLM_Get_Max_Context_Capacity_Request llm_get_max_context_capacity = 19;
+
+        VLM_Create_Request vlm_create = 20;
+        VLM_Generator_Generate_Request vlm_generator_generate = 21;
+
+        GenAI_Check_Hef_Exists_Request genai_check_hef_exists = 22;
+
+        Speech2Text_Create_Request speech2text_create = 23;
+        Speech2Text_Generate_Request speech2text_generate = 24;
+        Speech2Text_Release_Request speech2text_release = 25;
+        Speech2Text_Tokenize_Request speech2text_tokenize = 26;
+    }
+}
+
+message GenAIRpcReply {
+    oneof reply {
+        LLM_Create_Reply llm_create = 1;
+        LLM_Get_Generator_Params_Reply llm_get_generator_params = 2;
+        LLM_Generator_Create_Reply llm_generator_create = 3;
+        LLM_Generator_Write_Reply llm_generator_write = 4;
+        LLM_Generator_Generate_Reply llm_generator_generate = 5;
+        LLM_Generator_Read_Reply llm_generator_read = 6;
+        LLM_Generator_Abort_Reply llm_generator_abort = 7;
+        LLM_Generator_Release_Reply llm_generator_release = 8;
+        LLM_Tokenize_Reply llm_tokenize = 9;
+        LLM_Get_Context_Reply llm_get_context = 10;
+        LLM_Set_Context_Reply llm_set_context = 11;
+        LLM_Clear_Context_Reply llm_clear_context = 12;
+        LLM_Set_End_Of_Generation_Sequence_Reply llm_set_end_of_generation_sequence = 13;
+        LLM_Get_End_Of_Generation_Sequence_Reply llm_get_end_of_generation_sequence = 14;
+        LLM_Release_Reply llm_release = 15;
+        LLM_Set_Stop_Tokens_Reply llm_set_stop_tokens = 16;
+        LLM_Get_Stop_Tokens_Reply llm_get_stop_tokens = 17;
+        LLM_Get_Context_Usage_Size_Reply llm_get_context_usage_size = 18;
+        LLM_Get_Max_Context_Capacity_Reply llm_get_max_context_capacity = 19;
+
+        VLM_Create_Reply vlm_create = 20;
+        VLM_Generator_Generate_Reply vlm_generator_generate = 21;
+
+        GenAI_Check_Hef_Exists_Reply genai_check_hef_exists = 22;
+
+        Speech2Text_Create_Reply speech2text_create = 23;
+        Speech2Text_Generate_Reply speech2text_generate = 24;
+        Speech2Text_Release_Reply speech2text_release = 25;
+        Speech2Text_Tokenize_Reply speech2text_tokenize = 26;
+    }
+}
+
+message HefChunkInfo {
+    string name = 1;
+    uint64 size = 2;
+    uint64 offset = 3;
+}
+
+message LLM_Create_Request {
+    string lora_name = 1;
+    string hef_path = 2;
+    string group_id = 3;
+    repeated HefChunkInfo chunks_to_transfer = 4;
+    bool tokenizer_on_host = 5;
+    uint64 total_hef_size = 6;
+}
+
+message LLM_Create_Reply {
+    uint32 status = 1;
+    string prompt_template = 2;
+    uint32 embedding_features = 3;
+}
+
+message LLM_Get_Generator_Params_Request {
+}
+
+message LLMGeneratorParams {
+    float temperature = 1;
+    float top_p = 2;
+    uint32 top_k = 3;
+    float frequency_penalty = 4;
+    uint32 max_generated_tokens = 5;
+    bool do_sample = 6;
+    uint32 seed = 7;
+}
+
+message LLM_Get_Generator_Params_Reply {
+    LLMGeneratorParams generator_params = 1;
+    uint32 status = 2;
+}
+
+message LLM_Generator_Create_Request {
+    LLMGeneratorParams generator_params = 1;
+}
+
+message LLM_Generator_Create_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Generator_Write_Request {
+}
+
+message LLM_Generator_Write_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Generator_Generate_Request {
+}
+
+message LLM_Generator_Generate_Reply {
+    uint32 status = 1;
+    repeated uint32 initial_prefix_tokens = 2;
+}
+
+message Embedding {
+    uint32 type = 1;
+    bytes data = 2;
+}
+
+message TextGenerationInput {
+    string initial_prompt = 1;
+    repeated uint32 tokens = 2;
+    repeated Embedding embeddings = 3;
+}
+
+message TextGenerationOutput {
+    string output_token_str = 1;
+    uint32 output_token_id = 2;
+}
+
+message LLM_Generator_Read_Request {
+    uint32 timeout_ms = 1;
+    TextGenerationInput generation_input = 2;
+}
+
+message LLM_Generator_Read_Reply {
+    TextGenerationOutput generation_output = 1;
+    uint32 generation_status = 2;
+    uint32 status = 3;
+    bool is_context_full = 4;
+}
+
+message LLM_Tokenize_Request {
+    string prompt = 1;
+}
+
+message LLM_Tokenize_Reply {
+    repeated uint32 tokens = 1;
+    uint32 status = 2;
+}
+
+message LLM_Get_Context_Request {
+}
+
+message LLM_Get_Context_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Set_Context_Request {
+}
+
+message LLM_Set_Context_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Clear_Context_Request {
+}
+
+message LLM_Clear_Context_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Release_Request {
+}
+
+message LLM_Release_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Generator_Abort_Request {
+}
+
+message LLM_Generator_Abort_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Set_End_Of_Generation_Sequence_Request {
+    repeated int32 end_of_generation_sequence_tokens = 1;
+}
+
+message LLM_Generator_Release_Request {
+}
+
+message LLM_Generator_Release_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Set_End_Of_Generation_Sequence_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Get_End_Of_Generation_Sequence_Request {
+}
+
+message LLM_Get_End_Of_Generation_Sequence_Reply {
+    string end_of_generation_sequence = 1;
+    repeated int32 end_of_generation_sequence_tokens = 2;
+    uint32 status = 3;
+}
+
+message LLM_Set_Stop_Tokens_Request {
+    repeated TokenizedSequence tokenized_stop_tokens = 1;
+}
+
+message TokenizedSequence {
+    repeated int32 tokens = 1;
+}
+
+message LLM_Set_Stop_Tokens_Reply {
+    uint32 status = 1;
+}
+
+message LLM_Get_Stop_Tokens_Request {
+}
+
+message LLM_Get_Stop_Tokens_Reply {
+    repeated string stop_tokens = 1;
+    repeated TokenizedSequence tokenized_stop_tokens = 2;
+    uint32 status = 3;
+}
+
+message LLM_Get_Context_Usage_Size_Request {
+}
+
+message LLM_Get_Context_Usage_Size_Reply {
+    uint32 status = 1;
+    uint32 context_usage = 2;
+}
+
+message LLM_Get_Max_Context_Capacity_Request {
+}
+
+message LLM_Get_Max_Context_Capacity_Reply {
+    uint32 status = 1;
+    uint32 max_context_capacity = 2;
+}
+
+message VLM_Create_Request {
+    string group_id = 1;
+    string hef_path = 2;
+    repeated HefChunkInfo chunks_to_transfer = 3;
+    bool tokenizer_on_host = 4;
+    uint64 total_hef_size = 5;
+}
+
+message FrameFormat {
+    uint32 format_order = 1;
+    uint32 format_type = 2;
+}
+
+message FrameShape {
+    uint32 height = 1;
+    uint32 width = 2;
+    uint32 features = 3;
+}
+
+message VLM_Create_Reply {
+    uint32 status = 1;
+    FrameFormat frame_format = 2;
+    FrameShape frame_shape = 3;
+    string prompt_template = 4;
+    uint32 embedding_features = 5;
+    uint32 image_pad_token_id = 6;
+    uint32 video_pad_token_id = 7;
+    uint32 embeddings_per_frame = 8;
+}
+
+message VLM_Generator_Generate_Request {
+    uint32 number_of_frames = 1;
+    repeated uint32 video_frames_count_per_video = 3;
+}
+
+message VLM_Generator_Generate_Reply {
+    uint32 status = 1;
+}
+
+message GenAI_Check_Hef_Exists_Request {
+    string hef_path = 1;
+    string hash = 2;
+}
+
+message GenAI_Check_Hef_Exists_Reply {
+    uint32 status = 1;
+    bool hef_exists = 2;
+}
+
+message Speech2Text_Create_Request {
+    string group_id = 1;
+}
+
+message Speech2Text_Create_Reply {
+    uint32 status = 1;
+    Speech2TextGeneratorParams generator_params = 2;
+}
+
+message Speech2TextGeneratorParams {
+    uint32 task_type = 1;
+    string language = 2;
+    float repetition_penalty = 3;
+}
+
+message Speech2Text_Generate_Request {
+    Speech2TextGeneratorParams generator_params = 1;
+}
+
+message ProtoSpeech2TextSegmentInfo {
+    float start_sec = 1;
+    float end_sec = 2;
+    string text = 3;
+}
+
+message Speech2Text_Generate_Reply {
+    uint32 status = 1;
+    repeated ProtoSpeech2TextSegmentInfo segments_infos = 2;
+}
+
+message Speech2Text_Release_Request {
+}
+
+message Speech2Text_Release_Reply {
+    uint32 status = 1;
+}
+
+message Speech2Text_Tokenize_Request {
+    string text = 1;
+}
+
+message Speech2Text_Tokenize_Reply {
+    repeated int32 tokens = 1;
+    uint32 status = 2;
+}
