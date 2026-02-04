@@ -28,27 +28,19 @@ This library provides a high-level interface to run LLM inference on Hailo hardw
 
 ## Quick Start
 
-### 1. Verify your setup
-
-Run the included check script to verify everything is configured correctly:
-
-```bash
-./check-hailo-setup.sh
-```
-
-### 2. Install dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Start the HailoRT server (if not running as a service)
+### 2. Start the HailoRT server (if not running as a service)
 
 ```bash
 hailort_server 0.0.0.0
 ```
 
-### 4. Run the example
+### 3. Run the example
 
 ```bash
 npx ts-node examples/chat.ts /path/to/your/model.hef
@@ -120,38 +112,6 @@ console.log(`Max capacity: ${maxCtx} tokens`);
 
 // Clear context for new conversation
 await llm.clearContext();
-```
-
-### Function/Tool Calling
-
-```typescript
-import { HailoLLM, Message } from "hailo-node";
-
-const tools = [
-  {
-    type: "function",
-    function: {
-      name: "get_weather",
-      description: "Get the current weather for a location",
-      parameters: {
-        type: "object",
-        properties: {
-          location: { type: "string", description: "City name" },
-        },
-        required: ["location"],
-      },
-    },
-  },
-];
-
-const messages: Message[] = [
-  { role: "user", content: "What's the weather in Paris?" },
-];
-
-// Generate with tools (model may request tool calls)
-for await (const token of llm.generate(messages, { tools })) {
-  process.stdout.write(token);
-}
 ```
 
 ## API Reference
@@ -254,10 +214,6 @@ cmake .. \
 
 cmake --build . --target hailort_server -j$(nproc)
 ```
-
-## Building HailoRT from Source
-
-See [BUILDING.md](./BUILDING.md) for complete instructions on building HailoRT 5.2.0 with GenAI server support.
 
 ## License
 
