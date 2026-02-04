@@ -1,0 +1,31 @@
+[2026-01-31 17:34:40.386] [1434] [HailoRT] [info] [vdevice.cpp:227] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-01-31 17:34:40.420] [1434] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-01-31 17:41:30.829] [1470] [HailoRT] [info] [vdevice.cpp:227] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-01-31 17:41:30.851] [1470] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-01-31 17:41:30.851] [1470] [HailoRT] [error] [file_utils.cpp:175] [open] CHECK failed - Failed opening file, path: 
+[2026-01-31 17:41:30.851] [1470] [HailoRT] [error] [hef.cpp:547] [parse_hef_file] CHECK_SUCCESS failed with status=HAILO_OPEN_FILE_FAILURE(13)
+[2026-01-31 17:41:30.851] [1470] [HailoRT] [error] [hef.cpp:1066] [Impl] Failed parsing HEF file
+[2026-01-31 17:41:30.851] [1470] [HailoRT] [error] [hef.cpp:320] [create] Failed creating HEF
+[2026-01-31 17:41:30.851] [1470] [HailoRT] [error] [hef.cpp:156] [create] CHECK_SUCCESS failed with status=HAILO_OPEN_FILE_FAILURE(13)
+[2026-01-31 18:18:01.379] [3135] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-02-04 08:29:54.875] [2901] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-02-04 09:01:50.691] [5951] [HailoRT] [info] [vdevice.cpp:227] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-02-04 09:01:50.719] [5951] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-02-04 09:01:50.750] [5951] [HailoRT] [info] [llm.cpp:230] [create_unique] Sending 6 HEF chunks to server
+[2026-02-04 09:01:50.762] [5951] [HailoRT] [error] [session_wrapper.cpp:153] [send_file_chunked] CHECK failed - Failed to read chunk 0 from file /usr/local/hailo/resources/models/hailo10h/Qwen2.5-1.5B-Instruct.hef
+[2026-02-04 09:01:50.766] [5951] [HailoRT] [error] [llm.cpp:233] [create_unique] CHECK_SUCCESS failed with status=HAILO_FILE_OPERATION_FAILURE(14)
+[2026-02-04 09:01:50.766] [5951] [HailoRT] [error] [llm.cpp:167] [create] Failed to create LLM with status HAILO_FILE_OPERATION_FAILURE(14). Check device logs for more details.
+[2026-02-04 09:01:50.871] [5951] [HailoRT] [critical] [vdevice_hrpc_client.cpp:132] [~VDeviceHrpcClient] Failed to destroy VDevice! status = HAILO_COMMUNICATION_CLOSED(62)
+[2026-02-04 09:01:50.871] [5951] [HailoRT] [critical] [device_hrpc_client.cpp:96] [~DeviceHrpcClient] Failed to destroy Device! status = HAILO_COMMUNICATION_CLOSED(62)
+[2026-02-04 09:02:06.031] [5975] [HailoRT] [info] [vdevice.cpp:227] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-02-04 09:02:06.051] [5975] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-02-04 09:02:06.291] [5975] [HailoRT] [info] [llm.cpp:230] [create_unique] Sending 6 HEF chunks to server
+[2026-02-04 09:02:25.101] [5975] [HailoRT] [error] [serializer.cpp:162] [deserialize_reply] CHECK_SUCCESS failed with status=HAILO_INVALID_HEF(26) - Failed to create LLM
+[2026-02-04 09:02:25.101] [5975] [HailoRT] [error] [llm.cpp:253] [create_unique] CHECK_SUCCESS failed with status=HAILO_INVALID_HEF(26) - Failed to create LLM
+[2026-02-04 09:02:25.101] [5975] [HailoRT] [error] [llm.cpp:167] [create] Failed to create LLM with status HAILO_INVALID_HEF(26). Check device logs for more details.
+[2026-02-04 09:47:42.893] [8789] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-02-04 11:09:19.184] [14448] [HailoRT] [info] [vdevice.cpp:227] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-02-04 11:09:19.221] [14448] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-02-04 11:09:19.321] [14448] [HailoRT] [info] [llm.cpp:230] [create_unique] Sending 6 HEF chunks to server
+[2026-02-04 12:26:21.176] [19454] [HailoRT] [info] [vdevice.cpp:227] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-02-04 12:26:21.230] [19454] [HailoRT] [info] [device.cpp:53] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
