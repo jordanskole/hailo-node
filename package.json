@@ -12,6 +12,8 @@
     "start": "node --env-file=.env --import tsx src/main.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.9",
+    "hono": "^4.11.7",
     "protobufjs": "^7.4.0"
   },
   "devDependencies": {
