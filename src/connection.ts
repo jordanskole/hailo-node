@@ -1,5 +1,11 @@
+// connection.ts
+
 import * as net from "net";
-import { packLengthPrefix, readLengthPrefix, LENGTH_PREFIX_SIZE } from "./protocol";
+import {
+  packLengthPrefix,
+  readLengthPrefix,
+  LENGTH_PREFIX_SIZE,
+} from "./protocol";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -50,7 +56,10 @@ export class HailoConnection {
    * Sends: [8-byte length prefix][payload]
    * Reads: [8-byte length prefix][response payload]
    */
-  async execute(payload: Buffer, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Buffer> {
+  async execute(
+    payload: Buffer,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  ): Promise<Buffer> {
     this.ensureConnected();
     await this.writeFrame(payload);
     return this.readFrame(timeoutMs);
