@@ -28,27 +28,19 @@ This library provides a high-level interface to run LLM inference on Hailo hardw
 
 ## Quick Start
 
-### 1. Verify your setup
-
-Run the included check script to verify everything is configured correctly:
-
-```bash
-./check-hailo-setup.sh
-```
-
-### 2. Install dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Start the HailoRT server (if not running as a service)
+### 2. Start the HailoRT server (if not running as a service)
 
 ```bash
 hailort_server 0.0.0.0
 ```
 
-### 4. Run the example
+### 3. Run the example
 
 ```bash
 npx ts-node examples/chat.ts /path/to/your/model.hef
@@ -122,37 +114,55 @@ console.log(`Max capacity: ${maxCtx} tokens`);
 await llm.clearContext();
 ```
 
-### Function/Tool Calling
+### Tool / Function Calling
+
+Tool calling works the same way as with OpenAI, Anthropic, or Ollama — it's a client-side orchestration loop on top of regular token generation. The Hailo server is a pure token generator; tool calling is handled by formatting tool schemas into the prompt and parsing the model's output for tool call blocks.
+
+The pattern:
+
+1. Include tool definitions in your messages (using the model's expected format)
+2. Stream tokens from `generate()`
+3. Detect tool call syntax in the output (e.g., Qwen2.5 uses `<tool_call>...</tool_call>` tags)
+4. Execute the tool locally
+5. Feed the result back as a new message and resume generation
 
 ```typescript
 import { HailoLLM, Message } from "hailo-node";
 
-const tools = [
-  {
-    type: "function",
-    function: {
-      name: "get_weather",
-      description: "Get the current weather for a location",
-      parameters: {
-        type: "object",
-        properties: {
-          location: { type: "string", description: "City name" },
-        },
-        required: ["location"],
-      },
-    },
-  },
-];
+const toolDef = `You have access to the following tools:
+- get_weather(location: string): Get current weather for a city
+
+When you want to call a tool, use: <tool_call>{"name": "get_weather", "arguments": {"location": "Paris"}}</tool_call>`;
 
 const messages: Message[] = [
+  { role: "system", content: `You are a helpful assistant. ${toolDef}` },
   { role: "user", content: "What's the weather in Paris?" },
 ];
 
-// Generate with tools (model may request tool calls)
-for await (const token of llm.generate(messages, { tools })) {
-  process.stdout.write(token);
+// Collect the full response
+let response = "";
+for await (const token of llm.generate(messages)) {
+  response += token;
+}
+
+// Parse for tool calls and handle them
+if (response.includes("<tool_call>")) {
+  const toolCall = JSON.parse(
+    response.match(/<tool_call>(.*?)<\/tool_call>/s)![1]
+  );
+  const result = await executeToolLocally(toolCall);
+
+  // Feed result back and continue
+  messages.push({ role: "assistant", content: response });
+  messages.push({ role: "user", content: `Tool result: ${JSON.stringify(result)}` });
+
+  for await (const token of llm.generate(messages)) {
+    process.stdout.write(token);
+  }
 }
 ```
+
+> **Note:** Tool calling quality depends on the model. Smaller models (e.g., Qwen2.5-1.5B) can follow the format but may produce unreliable results. Tool definitions also consume context window tokens, which are limited on Hailo.
 
 ## API Reference
 
@@ -254,10 +264,6 @@ cmake .. \
 
 cmake --build . --target hailort_server -j$(nproc)
 ```
-
-## Building HailoRT from Source
-
-See [BUILDING.md](./BUILDING.md) for complete instructions on building HailoRT 5.2.0 with GenAI server support.
 
 ## License
 

@@ -58,49 +58,60 @@ function getType(name) {
     return getProtoRoot().lookupType(name);
 }
 // --- Internal RPC helpers ---
+// Map action IDs to their inner proto type names.
+// The wire protocol sends inner types directly (NOT wrapped in GenAIRpcRequest/Reply).
+const requestTypeMap = {
+    [protocol_1.HailoGenAIActionID.LLM__CREATE]: "LLM_Create_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GET_GENERATOR_PARAMS]: "LLM_Get_Generator_Params_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_CREATE]: "LLM_Generator_Create_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_WRITE]: "LLM_Generator_Write_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_GENERATE]: "LLM_Generator_Generate_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_READ]: "LLM_Generator_Read_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_ABORT]: "LLM_Generator_Abort_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_RELEASE]: "LLM_Generator_Release_Request",
+    [protocol_1.HailoGenAIActionID.LLM__TOKENIZE]: "LLM_Tokenize_Request",
+    [protocol_1.HailoGenAIActionID.LLM_CLEAR_CONTEXT]: "LLM_Clear_Context_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GET_CONTEXT_USAGE_SIZE]: "LLM_Get_Context_Usage_Size_Request",
+    [protocol_1.HailoGenAIActionID.LLM__GET_MAX_CONTEXT_CAPACITY]: "LLM_Get_Max_Context_Capacity_Request",
+    [protocol_1.HailoGenAIActionID.LLM_RELEASE]: "LLM_Release_Request",
+};
+const replyTypeMap = {
+    [protocol_1.HailoGenAIActionID.LLM__CREATE]: "LLM_Create_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GET_GENERATOR_PARAMS]: "LLM_Get_Generator_Params_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_CREATE]: "LLM_Generator_Create_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_WRITE]: "LLM_Generator_Write_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_GENERATE]: "LLM_Generator_Generate_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_READ]: "LLM_Generator_Read_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_ABORT]: "LLM_Generator_Abort_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GENERATOR_RELEASE]: "LLM_Generator_Release_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__TOKENIZE]: "LLM_Tokenize_Reply",
+    [protocol_1.HailoGenAIActionID.LLM_CLEAR_CONTEXT]: "LLM_Clear_Context_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GET_CONTEXT_USAGE_SIZE]: "LLM_Get_Context_Usage_Size_Reply",
+    [protocol_1.HailoGenAIActionID.LLM__GET_MAX_CONTEXT_CAPACITY]: "LLM_Get_Max_Context_Capacity_Reply",
+    [protocol_1.HailoGenAIActionID.LLM_RELEASE]: "LLM_Release_Reply",
+};
 function encodeRequest(actionId, fields) {
-    const root = getProtoRoot();
-    const RequestType = root.lookupType("GenAIRpcRequest");
-    // Map action IDs to the oneof field names in GenAIRpcRequest
-    const actionFieldMap = {
-        [protocol_1.HailoGenAIActionID.LLM__CREATE]: "llmCreate",
-        [protocol_1.HailoGenAIActionID.LLM__GET_GENERATOR_PARAMS]: "llmGetGeneratorParams",
-        [protocol_1.HailoGenAIActionID.LLM__GENERATOR_CREATE]: "llmGeneratorCreate",
-        [protocol_1.HailoGenAIActionID.LLM__GENERATOR_WRITE]: "llmGeneratorWrite",
-        [protocol_1.HailoGenAIActionID.LLM__GENERATOR_GENERATE]: "llmGeneratorGenerate",
-        [protocol_1.HailoGenAIActionID.LLM__GENERATOR_READ]: "llmGeneratorRead",
-        [protocol_1.HailoGenAIActionID.LLM__GENERATOR_ABORT]: "llmGeneratorAbort",
-        [protocol_1.HailoGenAIActionID.LLM__GENERATOR_RELEASE]: "llmGeneratorRelease",
-        [protocol_1.HailoGenAIActionID.LLM__TOKENIZE]: "llmTokenize",
-        [protocol_1.HailoGenAIActionID.LLM_CLEAR_CONTEXT]: "llmClearContext",
-        [protocol_1.HailoGenAIActionID.LLM__GET_CONTEXT_USAGE_SIZE]: "llmGetContextUsageSize",
-        [protocol_1.HailoGenAIActionID.LLM__GET_MAX_CONTEXT_CAPACITY]: "llmGetMaxContextCapacity",
-        [protocol_1.HailoGenAIActionID.LLM_RELEASE]: "llmRelease",
-    };
-    const fieldName = actionFieldMap[actionId];
-    if (!fieldName) {
-        throw new Error(`No request field mapping for action ${actionId}`);
+    const typeName = requestTypeMap[actionId];
+    if (!typeName) {
+        throw new Error(`No request type mapping for action ${actionId}`);
     }
-    const message = RequestType.create({ [fieldName]: fields });
-    const encoded = RequestType.encode(message).finish();
+    const MsgType = getType(typeName);
+    const message = MsgType.create(fields);
+    const encoded = MsgType.encode(message).finish();
     return (0, protocol_1.packPayload)(actionId, encoded);
 }
 function decodeReply(buf) {
-    const { body } = (0, protocol_1.unpackPayload)(buf);
-    const root = getProtoRoot();
-    const ReplyType = root.lookupType("GenAIRpcReply");
-    const decoded = ReplyType.decode(body);
-    const obj = ReplyType.toObject(decoded, {
+    const { actionId, body } = (0, protocol_1.unpackPayload)(buf);
+    const typeName = replyTypeMap[actionId];
+    if (!typeName) {
+        throw new Error(`No reply type mapping for action ${actionId}`);
+    }
+    const MsgType = getType(typeName);
+    const decoded = MsgType.decode(body);
+    return MsgType.toObject(decoded, {
         longs: Number,
         defaults: true,
     });
-    // Extract the active oneof field
-    const decodedAny = decoded;
-    const reply = decoded.$type.fieldsArray.find((f) => decodedAny[f.name] != null && f.name !== "");
-    if (reply) {
-        return obj[reply.name];
-    }
-    return obj;
 }
 // --- HailoLLM ---
 class HailoLLM {
@@ -127,7 +138,7 @@ class HailoLLM {
             tokenizerOnHost: false,
             totalHefSize: 0,
         });
-        const createReply = decodeReply(await conn.execute(createPayload, 45_000));
+        const createReply = decodeReply(await conn.execute(createPayload, 300_000));
         (0, errors_1.checkStatus)(createReply.status, "LLM create");
         llm.promptTemplate = createReply.promptTemplate ?? "";
         // LLM__GET_GENERATOR_PARAMS
