@@ -1,5 +1,5 @@
 {
-  "name": "hailort",
+  "name": "hailo-node",
   "version": "0.1.0",
   "description": "Node.js client for HailoRT GenAI server",
   "main": "dist/index.js",

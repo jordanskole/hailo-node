@@ -20,6 +20,8 @@ async function main() {
   });
 
   console.log("Connected to Hailo accelerator");
+  console.log("Prompt template:", JSON.stringify(llm.getPromptTemplate()));
+  console.log("Default params:", llm.getDefaultParams());
 
   const app = createApp(llm, mutex, config);
 

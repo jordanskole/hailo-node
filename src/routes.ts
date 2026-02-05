@@ -25,7 +25,7 @@ interface GenerateRequest {
 }
 
 function mapOptions(
-  options: Record<string, unknown> | undefined
+  options: Record<string, unknown> | undefined,
 ): Partial<LLMGeneratorParams> {
   if (!options) return {};
   const mapped: Partial<LLMGeneratorParams> = {};
@@ -33,17 +33,35 @@ function mapOptions(
     mapped.temperature = options.temperature;
   if (typeof options.top_p === "number") mapped.topP = options.top_p;
   if (typeof options.top_k === "number") mapped.topK = options.top_k;
-  if (typeof options.num_predict === "number")
+  if (typeof options.num_predict === "number" && options.num_predict > 0)
     mapped.maxGeneratedTokens = options.num_predict;
-  if (typeof options.seed === "number") mapped.seed = options.seed;
+  if (typeof options.seed === "number" && options.seed !== 0)
+    mapped.seed = options.seed;
   if (typeof options.frequency_penalty === "number")
     mapped.frequencyPenalty = options.frequency_penalty;
+  if (typeof options.repeat_penalty === "number")
+    mapped.frequencyPenalty = options.repeat_penalty;
   return mapped;
+}
+
+const STOP_SEQUENCES = ["<|im_end|>", "<|im_start|>", "<|endoftext|>"];
+
+function containsStopSequence(buffer: string): boolean {
+  return STOP_SEQUENCES.some((seq) => buffer.includes(seq));
+}
+
+function trimAtStopSequence(text: string): string {
+  let earliest = text.length;
+  for (const seq of STOP_SEQUENCES) {
+    const idx = text.indexOf(seq);
+    if (idx !== -1 && idx < earliest) earliest = idx;
+  }
+  return text.substring(0, earliest);
 }
 
 function prependSystemPrompt(
   messages: ChatMessage[],
-  config: ServerConfig
+  config: ServerConfig,
 ): Message[] {
   const result: Message[] = messages.map((m) => ({
     role: m.role,
@@ -58,13 +76,26 @@ function prependSystemPrompt(
 export function createApp(
   llm: HailoLLM,
   mutex: Mutex,
-  config: ServerConfig
+  config: ServerConfig,
 ): Hono {
   const app = new Hono();
+
+  // GET / — Ollama health check (clients probe this first)
+  app.get("/", (c) => {
+    return c.text("Ollama is running");
+  });
+
+  // HEAD / — health check variant
+  app.on("HEAD", "/", (c) => {
+    return c.body(null, 200);
+  });
 
   // POST /api/chat
   app.post("/api/chat", async (c) => {
     const body = (await c.req.json()) as ChatRequest;
+    const msg = body.messages;
+    console.log(msg.length);
+    console.log(msg[msg.length - 1]);
     const messages = prependSystemPrompt(body.messages, config);
     const params = mapOptions(body.options);
     const model = config.modelDisplayName;
@@ -84,8 +115,11 @@ export function createApp(
         });
 
         try {
+          let buffer = "";
           for await (const token of llm.generate(messages, params)) {
             if (aborted) break;
+            buffer += token;
+            if (containsStopSequence(buffer)) break;
             tokenCount++;
             const chunk = JSON.stringify({
               model,
@@ -121,6 +155,10 @@ export function createApp(
     try {
       for await (const token of llm.generate(messages, params)) {
         fullContent += token;
+        if (containsStopSequence(fullContent)) {
+          fullContent = trimAtStopSequence(fullContent);
+          break;
+        }
         tokenCount++;
       }
     } finally {
@@ -165,8 +203,11 @@ export function createApp(
         });
 
         try {
+          let buffer = "";
           for await (const token of llm.generate(messages, params)) {
             if (aborted) break;
+            buffer += token;
+            if (containsStopSequence(buffer)) break;
             tokenCount++;
             const chunk = JSON.stringify({
               model,
@@ -202,6 +243,10 @@ export function createApp(
     try {
       for await (const token of llm.generate(messages, params)) {
         fullResponse += token;
+        if (containsStopSequence(fullResponse)) {
+          fullResponse = trimAtStopSequence(fullResponse);
+          break;
+        }
         tokenCount++;
       }
     } finally {
@@ -233,6 +278,7 @@ export function createApp(
             parent_model: "",
             format: "hef",
             family: "qwen2",
+            families: ["qwen2"],
             parameter_size: "1.5B",
             quantization_level: "",
           },
@@ -247,8 +293,12 @@ export function createApp(
   });
 
   // POST /api/show
-  app.post("/api/show", (c) => {
+  app.post("/api/show", async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const name = body.name ?? body.model ?? config.modelDisplayName;
     return c.json({
+      name,
+      model: name,
       modelfile: "",
       parameters: "",
       template: llm.getPromptTemplate(),
@@ -256,6 +306,7 @@ export function createApp(
         parent_model: "",
         format: "hef",
         family: "qwen2",
+        families: ["qwen2"],
         parameter_size: "1.5B",
         quantization_level: "",
       },
