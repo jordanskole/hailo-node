@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Node.js/TypeScript client library for the HailoRT GenAI RPC server. Communicates with Hailo AI accelerator devices for LLM inference over TCP sockets using Protocol Buffers for message serialization. There are no native/C++ bindings — all communication is via a TCP RPC protocol.
 
+## Environment
+
+- **Target device:** Raspberry Pi 5 with Hailo-10H AI accelerator (M.2 HAT+)
+- **Device hostname:** `jarvis.local`
+- **Server ports:** 12133 (HailoRT RPC), 12145 (LLM), 12147 (VLM), 12149 (Speech2Text)
+- **No firewall** — ports are directly reachable from the network
+- **HEF model path on device:** `/usr/local/hailo/resources/models/hailo10h/Qwen2.5-1.5B-Instruct.hef`
+- **HailoRT source (on device):** `/home/jordan/hailort/` — patched v5.2.0 with 3 bug fixes (see `HAILO10H-FIXES.md` in that repo)
+- **`hefPath` is server-side** — when connecting remotely, the path must be where the HEF lives on the Pi, not the local machine
+
 ## Build Commands
 
 ```bash
@@ -46,7 +56,7 @@ Three-layer design:
 - TypeScript strict mode, ES2022 target, CommonJS modules
 - Requires Node.js >= 18.0.0
 - Default server port: 12145 (LLM GenAI)
-- Timeouts: 10s default, 45s for `LLM__CREATE` and `LLM__GENERATOR_READ`
+- Timeouts: 300s for `LLM__CREATE` (model loading is slow on Hailo-10H), 45s for `LLM__GENERATOR_READ`, 10s default
 - All RPC replies are status-checked via `checkStatus()` which throws `HailoError` on failure
 
 ## Wire Protocol
@@ -54,3 +64,26 @@ Three-layer design:
 Frames: `[8-byte length (uint64 LE)][4-byte action ID (uint32 LE)][protobuf message]`
 
 Typical flow: `LLM__CREATE` → `LLM__GET_GENERATOR_PARAMS` → `LLM__GENERATOR_CREATE` → `LLM__GENERATOR_WRITE` → `LLM__GENERATOR_GENERATE` → repeated `LLM__GENERATOR_READ` until done → `LLM__GENERATOR_RELEASE` → `LLM_RELEASE`
+
+## HailoRT Server (on device)
+
+The hailort_server at `/home/jordan/hailort/` is patched v5.2.0. Three bugs were fixed to get LLM inference working on Hailo-10H — see `/home/jordan/hailort/HAILO10H-FIXES.md` for details:
+
+1. **Wrong InferModel type** — `create_infer_model(Hef)` falls through to base class on SOC_ACCELERATOR; fixed by using `create_infer_model(MemoryView)` overload
+2. **Timeout too short** — `WAIT_FOR_OPERATION_TIMEOUT` was 10s, increased to 120s for large HEF PCIe transfers
+3. **Use-after-free in TokenEmbedder** — `Eigen::Map` points into HEF buffer that gets freed after model creation; fixed by calling `set_resource_guard(hef_buffer)`
+
+### Rebuilding the server (on device)
+
+```bash
+cd /home/jordan/hailort/build
+cmake --build . --target hailort_server -j2
+sudo cp hailort_server /usr/local/bin/hailort_server
+sudo systemctl restart hailort-server
+```
+
+## Server Limitations
+
+- No endpoint to list/discover available HEF files — only `GENAI__CHECK_HEF_EXISTS` (takes path + hash, returns boolean)
+- Tool/function calling is client-side only — format tools into prompts, parse model output for tool call blocks
+- Qwen2.5-1.5B has limited context window and tool-calling reliability

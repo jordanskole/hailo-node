@@ -1,16 +1,22 @@
 # hailo-node
 
-Node.js/TypeScript bindings for HailoRT GenAI LLM inference on Hailo-10H accelerators.
+Node.js/TypeScript client library for HailoRT GenAI LLM inference on Hailo-10H accelerators.
 
-This library provides a high-level interface to run LLM inference on Hailo hardware via the HailoRT GenAI RPC server.
+Provides both a programmatic TypeScript API and an **Ollama-compatible HTTP server**, so standard tools (Open WebUI, LangChain, `curl`) can use the Hailo accelerator as a drop-in LLM backend.
 
 ## Architecture
 
 ```
-┌─────────────────┐     TCP/12145     ┌─────────────────────┐     PCIe     ┌─────────────┐
-│   hailo-node    │ ◄───────────────► │   hailort_server    │ ◄──────────► │  Hailo-10H  │
-│   (Your App)    │    Protobuf RPC   │   (GenAI Server)    │              │     TPU     │
-└─────────────────┘                   └─────────────────────┘              └─────────────┘
+                                       ┌─────────────────────┐     PCIe     ┌─────────────┐
+┌──────────────┐    HTTP/11434         │                     │ ◄──────────► │  Hailo-10H  │
+│  Open WebUI  │ ──────────────►┐      │   hailort_server    │              │     TPU     │
+│  LangChain   │                │      │   (GenAI Server)    │              └─────────────┘
+│  curl / etc  │                │      └──────────▲──────────┘
+└──────────────┘                │                 │
+                         ┌──────▼──────┐    TCP/12145
+                         │ hailo-node  │    Protobuf RPC
+                         │ HTTP Server │──────────┘
+                         └─────────────┘
 ```
 
 ## Prerequisites
@@ -34,17 +40,147 @@ This library provides a high-level interface to run LLM inference on Hailo hardw
 npm install
 ```
 
-### 2. Start the HailoRT server (if not running as a service)
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+# Edit .env with your Hailo server settings
+```
+
+### 3. Start the HailoRT server (if not running as a service)
 
 ```bash
 hailort_server 0.0.0.0
 ```
 
-### 3. Run the example
+### 4. Start the Ollama-compatible HTTP server
+
+```bash
+npm run start
+```
+
+The server listens on `http://0.0.0.0:11434` by default (the standard Ollama port).
+
+### 5. Test it
+
+```bash
+# Check the server is running
+curl http://localhost:11434/api/tags
+
+# Chat (streaming)
+curl -N http://localhost:11434/api/chat \
+  -d '{"model":"qwen2.5:1.5b","messages":[{"role":"user","content":"What is 2+2?"}]}'
+
+# Chat (non-streaming)
+curl http://localhost:11434/api/chat \
+  -d '{"model":"qwen2.5:1.5b","messages":[{"role":"user","content":"Hello"}],"stream":false}'
+```
+
+### Interactive CLI example
+
+The original interactive chat is still available as an example:
 
 ```bash
 npx ts-node examples/chat.ts /path/to/your/model.hef
 ```
+
+## Ollama-Compatible HTTP API
+
+The server exposes endpoints compatible with the [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md), making it a drop-in backend for tools like Open WebUI, LangChain, and anything that speaks the Ollama protocol.
+
+### Endpoints
+
+| Method | Path            | Description                     |
+| ------ | --------------- | ------------------------------- |
+| POST   | `/api/chat`     | Chat completions (streaming/non-streaming) |
+| POST   | `/api/generate` | Text generation (streaming/non-streaming)  |
+| GET    | `/api/tags`     | List available models           |
+| GET    | `/api/version`  | Server version                  |
+| POST   | `/api/show`     | Model metadata                  |
+
+### POST /api/chat
+
+```bash
+curl -N http://localhost:11434/api/chat -d '{
+  "model": "qwen2.5:1.5b",
+  "messages": [
+    {"role": "user", "content": "Write a haiku about computing"}
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_predict": 256
+  }
+}'
+```
+
+Streams NDJSON (`application/x-ndjson`). Each line:
+
+```json
+{"model":"qwen2.5:1.5b","created_at":"...","message":{"role":"assistant","content":"token"},"done":false}
+```
+
+Final line includes `"done": true` with timing stats. Set `"stream": false` for a single JSON response.
+
+### POST /api/generate
+
+```bash
+curl -N http://localhost:11434/api/generate -d '{
+  "model": "qwen2.5:1.5b",
+  "prompt": "Explain quantum computing in one sentence",
+  "system": "You are a physics professor."
+}'
+```
+
+Same streaming behavior as `/api/chat`, but uses a `response` field instead of `message`.
+
+### Supported Options
+
+| Ollama option       | Maps to               |
+| ------------------- | ---------------------- |
+| `temperature`       | `temperature`          |
+| `top_p`             | `topP`                 |
+| `top_k`             | `topK`                 |
+| `num_predict`       | `maxGeneratedTokens`   |
+| `seed`              | `seed`                 |
+| `frequency_penalty` | `frequencyPenalty`     |
+
+Unsupported options are silently ignored.
+
+### System Prompt
+
+A configurable system prompt is automatically prepended to requests that don't include a `role: "system"` message. This ensures the model responds in the configured language (Qwen2.5-1.5B defaults to Chinese without one). Callers can override by providing their own system message:
+
+```bash
+curl -N http://localhost:11434/api/chat -d '{
+  "model": "qwen2.5:1.5b",
+  "messages": [
+    {"role": "system", "content": "You are a pirate. Respond in pirate speak."},
+    {"role": "user", "content": "Hello"}
+  ]
+}'
+```
+
+### Configuration
+
+All settings are read from environment variables (loaded from `.env`):
+
+| Variable             | Default                                                    | Description              |
+| -------------------- | ---------------------------------------------------------- | ------------------------ |
+| `SERVER_PORT`        | `11434`                                                    | HTTP listen port         |
+| `SERVER_HOST`        | `0.0.0.0`                                                 | HTTP bind address        |
+| `SYSTEM_PROMPT`      | `You are a helpful assistant. Always respond in English.`  | Default system prompt    |
+| `LANGUAGE`           | `en`                                                       | Language hint            |
+| `MODEL_DISPLAY_NAME` | `qwen2.5:1.5b`                                            | Model name in API responses |
+| `LLM_HOSTNAME`       | `localhost`                                                | Hailo RPC server host    |
+| `LLM_PORT_NUMBER`    | `12145`                                                    | Hailo RPC server port    |
+| `HEF_LIBRARY_PATH`   | `/usr/local/hailo/resources/models/hailo10h/`              | HEF directory on server  |
+| `HEF_DEFAULT_MODEL`  | `Qwen2.5-1.5B-Instruct.hef`                               | HEF model filename       |
+
+### Concurrency
+
+The Hailo TCP connection is single-threaded. Concurrent HTTP requests are serialized via an internal mutex (FIFO queue), not rejected. Requests wait their turn rather than returning 503.
 
 ## Usage
 

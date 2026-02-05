@@ -327,13 +327,13 @@ export class LLMGenerator {
 
   /**
    * Accumulate prompt messages. Call before run().
-   * Messages are formatted as JSON strings per the HailoRT chat format.
+   * Messages are formatted using ChatML tokens (Qwen im_start/im_end format).
    */
   write(messages: Message[]): void {
-    const jsonMessages = messages
-      .map((m) => JSON.stringify({ role: m.role, content: m.content }))
-      .join("");
-    this.prompt += jsonMessages;
+    for (const m of messages) {
+      this.prompt += `<|im_start|>${m.role}\n${m.content}<|im_end|>\n`;
+    }
+    this.prompt += `<|im_start|>assistant\n`;
   }
 
   /**
